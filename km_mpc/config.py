@@ -55,58 +55,6 @@ PARAMETER_CONFIG = {
 }
 
 
-RELAXED_PARAMETER_CONFIG = {
-    '1/m': {
-        'dimensions': 1,
-        'lower_bound': 0.0,
-        'upper_bound': BIG_POSITIVE,
-        'default_value': 0.0,
-    },
-    'a/m': {
-        'dimensions': 3,
-        'lower_bound': np.zeros(3),
-        'upper_bound': BIG_POSITIVE * np.ones(3),
-        'default_value': np.zeros(3),
-    },
-    'd/Ixx': {
-        'dimensions': 4,
-        'lower_bound': BIG_NEGATIVE * np.ones(4),
-        'upper_bound': BIG_POSITIVE * np.ones(4),
-        'default_value': np.zeros(4),
-    },
-    'c/Iyy': {
-        'dimensions': 4,
-        'lower_bound': BIG_NEGATIVE * np.ones(4),
-        'upper_bound': BIG_POSITIVE * np.ones(4),
-        'default_value': np.zeros(4),
-    },
-    'b/Izz': {
-        'dimensions': 4,
-        'lower_bound': np.zeros(4),
-        'upper_bound': BIG_POSITIVE * np.ones(4),
-        'default_value': np.zeros(4),
-    },
-    'Ixx_cross': {
-        'dimensions': 1,
-        'lower_bound': BIG_NEGATIVE,
-        'upper_bound': BIG_POSITIVE,
-        'default_value': 0.0,
-    },
-    'Iyy_cross': {
-        'dimensions': 1,
-        'lower_bound': BIG_NEGATIVE,
-        'upper_bound': BIG_POSITIVE,
-        'default_value': 0.0,
-    },
-    'Izz_cross': {
-        'dimensions': 1,
-        'lower_bound': BIG_NEGATIVE,
-        'upper_bound': BIG_POSITIVE,
-        'default_value': 0.0,
-    },
-}
-
-
 STATE_CONFIG = {
     'position_wf': {
         'dimensions': 3,

@@ -16,7 +16,7 @@ from km_mpc.config import *
 class DynamicsModel():
     def __init__(
         self,
-        parameters: Union[ModelParameters, AffineModelParameters],
+        parameters: ModelParameters,
         lbu: Input,
         ubu: Input,
         state_config: dict,
@@ -34,13 +34,13 @@ class DynamicsModel():
         self._ubu = ubu
 
     @property
-    def parameters(self) -> Union[ModelParameters, AffineModelParameters]:
+    def parameters(self) -> ModelParameters:
         return self._parameters
 
     @parameters.setter
     def parameters(
         self,
-        parameters: Union[ModelParameters, AffineModelParameters]
+        parameters: ModelParameters
     ) -> None:
         self._parameters = parameters
 
@@ -94,7 +94,7 @@ class DynamicsModel():
         x: State,
         u: Input = None,
         w: ProcessNoise = None,
-        theta: Union[ModelParameters, AffineModelParameters] = None,
+        theta: ModelParameters = None,
     ) -> State:
         if is_none(u): u = Input()
         if is_none(w): w = ProcessNoise()
@@ -177,71 +177,6 @@ class DynamicsModel():
         return x_next
 
 
-class ParameterAffineQuadrotorModel(DynamicsModel):
-    def __init__(
-        self,
-        parameters: AffineModelParameters,
-        lbu: Input = Input(get_config_values('lower_bound', INPUT_CONFIG)),
-        ubu: Input = Input(get_config_values('upper_bound', INPUT_CONFIG)),
-    ) -> None:
-        super().__init__(
-            parameters, lbu, ubu,
-            STATE_CONFIG, INPUT_CONFIG, PROCESS_NOISE_CONFIG, 1
-        )
-        self._set_affine_model()
-
-    def _set_affine_model(self) -> None:
-        p = symbolic('position_wf', STATE_CONFIG)
-        q = symbolic('attitude', STATE_CONFIG)
-        vB = symbolic('linear_velocity_bf', STATE_CONFIG)
-        wB = symbolic('angular_velocity_bf', STATE_CONFIG)
-        x = cs.SX(cs.vertcat(p, q, vB, wB))
-
-        g = cs.vertcat(0, 0, -GRAVITY)
-
-        # Parameter-independent dynamics
-        F = cs.SX(cs.vertcat(
-            quat.Q(q) @ vB,
-            0.5 * quat.G(q) @ wB,
-            quat.Q(q).T @ g - cs.cross(wB, vB),
-            cs.SX.zeros(3),
-        ))
-
-        # Parameter-coupled dynamics
-        u = symbolic('normalized_squared_motor_speed', INPUT_CONFIG)
-        K = cs.SX(cs.vertcat(
-            cs.SX.zeros(2, self.nu),
-            cs.SX.ones(1, self.nu),
-        ))
-        A = cs.SX(cs.diag(vB))
-        B = cs.SX(cs.vertcat(
-            cs.horzcat( u.T, cs.SX.zeros(1, 2*self.nu) ),
-            cs.horzcat(cs.SX.zeros(1, self.nu), -u.T, cs.SX.zeros(1, self.nu) ),
-            cs.horzcat( cs.SX.zeros(1, 2*self.nu), (u * alternating_ones(self.nu)).T ),
-        ))
-        I = cs.SX(cs.diag(cs.vertcat(wB[1]*wB[2], wB[0]*wB[2], wB[0]*wB[1])))
-        G = cs.SX(cs.vertcat(
-            cs.SX.zeros(7, 7 + 3*self.nu),
-            cs.horzcat( K @ u, -A, cs.SX.zeros(3, 3 + 3*self.nu) ),
-            cs.horzcat( cs.SX.zeros(3, 4), B, -I ),
-        ))
-
-        # Additive process noise
-        w = cs.SX.sym('w', self.nw)
-
-        # Affine parameters
-        theta = cs.SX.sym('relaxed_parameters', self.ntheta)
-
-        # Continuous-time dynamics
-        xdot = w + F + G @ theta
-
-        # Define dynamics function
-        self._f = cs.Function(
-            'f_ParameterAffineQuadrotorModel',
-            [x, u, w, theta], [xdot]
-        )
-
-
 class NonlinearQuadrotorModel(DynamicsModel):
     def __init__(
         self,
@@ -254,10 +189,6 @@ class NonlinearQuadrotorModel(DynamicsModel):
             STATE_CONFIG, INPUT_CONFIG, PROCESS_NOISE_CONFIG, 1
         )
         self._set_model()
-
-    def as_affine(self) -> ParameterAffineQuadrotorModel:
-        return ParameterAffineQuadrotorModel(
-            self._parameters.as_affine(), self.lbu, self.ubu)
 
     def _set_model(self) -> None:
         p = symbolic('position_wf', STATE_CONFIG)
